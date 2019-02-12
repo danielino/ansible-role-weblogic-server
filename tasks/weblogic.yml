@@ -1,0 +1,24 @@
+---
+- stat:
+    path: "{{ domains_directory }}"
+  register: ddir
+  
+- name: "copy wlst script to create domain"
+  template:
+    src: "{{ wlst_script_name }}.j2"
+    dest: "/tmp/{{ wlst_script_name }}"
+
+- name: "create weblogic domain"
+  environment: 
+    JAVA_HOME: "{{ jrockit_directory }}"
+    JAVA_VENDOR: Sun
+  shell: "{{ weblogic_directory }}/common/bin/wlst.sh /tmp/{{ wlst_script_name }}"
+  become_user: oracle
+  when: ddir.stat.isdir is not defined
+
+- name: "set directory permission"
+  file: 
+    path: "{{ mountpoint }}"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_user }}"
+    recurse: yes

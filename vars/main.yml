@@ -1,0 +1,4 @@
+---
+# vars file for weblogic_server
+role: 'adminserver'
+wlst_script_name: create-wls-adminserver.py

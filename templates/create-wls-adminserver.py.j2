@@ -1,0 +1,84 @@
+import sys
+user = os.environ.get("ADMIN_USER", "{{ weblogic_admin_user }}")
+password = os.environ.get("ADMIN_PASSWORD", "{{ weblogic_admin_password }}")
+domain_path = os.environ.get("DOMAIN_PATH", "{{ domains_directory }}")
+hostname = os.environ.get("HOSTNAME", list(os.popen('hostname'))[0].replace('\n',''))
+java_home = os.environ.get('JAVA_HOME')
+node_manager_home = os.environ.get('NODE_MANAGER_HOME', "{{ nodemanager_home }}")
+node_ip = os.environ.get('NODE_HOST', "{{ nodemanager_ip }}")
+admin_host = os.environ.get('ADMIN_HOST', "{{ weblogic_admin_host }}")
+admin_port = os.environ.get('ADMIN_PORT', "{{ weblogic_admin_port }}")
+log_file = os.environ.get('WLST_LOG_FILE', "{{ wlst_log_file }}")
+wls_template = os.environ.get('WEBLOGIC_TEMPLATE', "{{ wls_template }}")
+
+    
+class Log:
+    def __init__(self, filename):
+        self.fp = open(filename, 'w+')
+        sys.stdout = self.fp
+
+    def write(self,message, level):
+        message = "%s - [%s] - %s" % ( java.util.Date().toString(), level, message)
+        if not message.endswith('\n'):
+            message = "%s\n" % message
+        self.fp.write(message)
+        self.fp.flush()
+
+    def debug(self,message):
+        self.write(message, 'DEBUG')
+
+    def info(self,message):
+        self.write(message, 'INFO')
+
+    def warn(self,message):
+        self.write(message, 'WARN')
+
+    def error(self,message):
+        self.write(message, 'ERROR')
+
+    def destroy(self):
+        self.fp.close()
+
+
+log = Log(log_file)
+
+
+def create_boot_properties_file():
+    filepath = "{{ domain_path }}/servers/AdminsServer/security"
+    os.mkdir(filepath)
+    filename = '%s/boot.properties' % filepath
+    fp = open(filename, 'w+')
+    fp.write('username=%s\n' % admin_user)
+    fp.write('password=%s\n' % admin_pass)
+    fp.flush()
+    fp.close()
+
+
+def create_server():
+    log.info("configure admin server")
+    readTemplate(wls_template)
+    log.info("configure administration server ip and port")
+    set('ListenAddress','')
+    set('ListenPort', admin_port)
+    set('LoginTimeoutMillis', 30000)
+    log.info("configure user password")
+    cd('Servers/AdminServer')
+    cd('/')
+    cd('Security/base_domain/User/%s' admin_user )
+    cmo.setPassword(admin_pass)
+
+    setOption('OverwriteDomain', 'true')
+    setOption('ServerStartMode','prod')
+
+    writeDomain(domain_path)
+    closeTemplate()
+    # create credential file
+    create_boot_properties_file()
+
+
+def main():
+    log.info("\n---- create_server() ----")
+    create_server()    
+
+main()
+log.destroy()
